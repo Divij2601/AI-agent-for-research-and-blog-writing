@@ -84,7 +84,7 @@ def worker(payload: dict) -> dict:
 
 
 def reducer(state: State)-> dict:
-    title = state.["plan"].blog_title
+    title = state["plan"].blog_title
     body= "\n\n".join(state["sections"]).strip()
 
     final_md= f" #{title} \n\n {body}"
@@ -98,7 +98,7 @@ def reducer(state: State)-> dict:
 
 
 g = StateGraph(State)
-g.add_node("orchestrator", orchestrator)
+g.add_node("orchestrator", Orchestrator)
 g.add_node("worker", worker)
 g.add_node("reducer", reducer)
 
@@ -112,4 +112,4 @@ app = g.compile()
 out = app.invoke({"topic": "Write a blog on Self Attention", "sections": []})
 
 
-
+print(out)
