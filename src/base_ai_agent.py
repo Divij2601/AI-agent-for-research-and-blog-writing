@@ -44,11 +44,43 @@ def Orchestrator(state: State) -> dict:
                 )
             ),
             HumanMessage(
-                content= f("Topic: {state['topic']}"),
+                content= f"Topic: {state['topic']}",
             )
         ]
     )
     return {"plan":plan}
+
+def fanout(state: State):
+    return [Send("worker", {"task":task, "topic":state["topic"], "plan": state["plan"]})
+    for task in state["plan"].tasks]
+
+#worker receives the task, topic and plan and it's goal is to work on a Specific Task
+def worker(payload: dict) -> dict:
+    #payload contaims what we sent 
+    task= payload["task"]
+    topic= payload["topic"]
+    plan= payload["plan"] 
+
+    blog_title = plan.blog_title
+
+    section_md = llm.invoke(
+        [
+            SystemMessage(content="Write one clean Markdown section."),
+            HumanMessage(
+                content=(
+                    f"Blog: {blog_title}\n"
+                    f"Topic: {topic}\n\n"
+                    f"Section: {task.title}\n"
+                    f"Brief: {task.brief}\n\n"
+                    "Return only the section content in Markdown."
+
+                )
+            ),
+        ]
+    ).content.strip()
+
+    return {"sections": [section_md]}
+
 
  
 
