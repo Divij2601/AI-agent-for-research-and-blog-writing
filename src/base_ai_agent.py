@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import Send
-
+from pathlib import Path
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 
@@ -82,6 +82,34 @@ def worker(payload: dict) -> dict:
     return {"sections": [section_md]}
 
 
- 
+
+def reducer(state: State)-> dict:
+    title = state.["plan"].blog_title
+    body= "\n\n".join(state["sections"]).strip()
+
+    final_md= f" #{title} \n\n {body}"
+
+    #save this file 
+    filename = title.lower().replace(" ", "_")+".md"
+    output_path = Path(filename)
+    output_path.write_text(final_md, encoding="utf-8")
+
+    return {"final": final_md}
+
+
+g = StateGraph(State)
+g.add_node("orchestrator", orchestrator)
+g.add_node("worker", worker)
+g.add_node("reducer", reducer)
+
+g.add_edge(START, "orchestrator")
+g.add_conditional_edges("orchestrator", fanout, ["worker"])
+g.add_edge("worker", "reducer")
+g.add_edge("reducer", END)
+
+app = g.compile()
+
+out = app.invoke({"topic": "Write a blog on Self Attention", "sections": []})
+
 
 
